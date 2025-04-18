@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black and White Noise Canvas with Mask</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            position: absolute;
+            width:100vw;
+            height:100vh;
+            image-rendering: pixelated;
+        }
+img {
+  display:none;
+}
+    </style>
+</head>
+<body>
+    <canvas id="backgroundCanvas"></canvas>
+    <canvas id="foregroundCanvas"></canvas>
+    <canvas id="initialnoise" style="display:none"></canvas>
+    <img id="maskImage" src="mask.png"  alt="Mask Image">
+    <img id="img" src="hi.jpg"  alt="Mask Image">
+
+    <script defer>
+    const initialnoise = document.getElementById("initialnoise");
+    const backgroundCanvas = document.getElementById("backgroundCanvas");
+    const foregroundCanvas = document.getElementById("foregroundCanvas");
+    const maskImage = document.getElementById("maskImage");
+    const hi = document.getElementById("img");
+
+    const pixelSize = 2;
+
+    function resizeCanvas() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        [backgroundCanvas, foregroundCanvas, initialnoise].forEach(canvas => {
+            canvas.width = width;
+            canvas.height = height;
+        });
+    }
+
+    // Optimized noise generator using ImageData
+    function generateNoise(canvas) {
+        const ctx = canvas.getContext("2d");
+        const width = canvas.width;
+        const height = canvas.height;
+        const imageData = ctx.createImageData(width, height);
+        const data = imageData.data;
+
+        for (let y = 0; y < height; y += pixelSize) {
+            for (let x = 0; x < width; x += pixelSize) {
+                const color = Math.random() < 0.5 ? 0 : 255;
+                for (let dy = 0; dy < pixelSize; dy++) {
+                    for (let dx = 0; dx < pixelSize; dx++) {
+                        const px = (x + dx);
+                        const py = (y + dy);
+                        if (px >= width || py >= height) continue;
+                        const index = (py * width + px) * 4;
+                        data[index] = color;
+                        data[index + 1] = color;
+                        data[index + 2] = color;
+                        data[index + 3] = 255;
+                    }
+                }
+            }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+    }
+
+    resizeCanvas();
+
+    const fgctx = foregroundCanvas.getContext("2d");
+    const bgctx = backgroundCanvas.getContext("2d");
+    fgctx.imageSmoothingEnabled = false;
+    bgctx.imageSmoothingEnabled = false;
+
+    fgctx.drawImage(maskImage, 0, 0, foregroundCanvas.width, foregroundCanvas.height);
+    fgctx.globalCompositeOperation = 'source-out';
+
+    generateNoise(initialnoise);
+    fgctx.drawImage(initialnoise, 0, 0);
+
+    // Use requestAnimationFrame for better performance
+    function animateNoise() {
+        generateNoise(backgroundCanvas);
+        setTimeout(() => requestAnimationFrame(animateNoise), 25); // Throttle to ~10fps
+    }
+
+    requestAnimationFrame(animateNoise);
+</script>
+
+</body>
+</html>
